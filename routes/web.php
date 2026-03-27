@@ -16,7 +16,7 @@ Route::prefix('users')
     ->controller(UserController::class)
     ->middleware(['auth', 'verified'])
     ->group(function () {
-        Route::get('/', 'index')->name('users.index');
+        Route::get('/', 'index')->name('user-list');
         Route::get('/create', 'create')->name('users.create');
         Route::post('/', 'store')->name('users.store');
         Route::get('/{user}', 'show')->name('users.show');
