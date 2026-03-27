@@ -8,7 +8,7 @@ use Inertia\Response;
 
 class UserController extends Controller
 {
-    public function index() : Response
+    public function index(): Response
     {
         $users = User::query()
             ->select(['id', 'name', 'email'])

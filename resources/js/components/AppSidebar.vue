@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/sidebar';
 import { useCurrentUrl } from '@/composables/useCurrentUrl';
 import { dashboard } from '@/routes';
-import { index as userList } from '@/routes/users';
+import { index } from '@/routes/users';
 import type { NavItem } from '@/types';
 
 type SidebarItem = NavItem & {
@@ -35,7 +35,7 @@ const mainNavItems: SidebarItem[] = [
     },
     {
         title: 'Usuários',
-        href: userList(),
+        href: index(),
         icon: UserRound,
     },
     {
