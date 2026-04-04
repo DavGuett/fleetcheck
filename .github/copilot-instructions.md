@@ -1,275 +1,234 @@
-# Fleet Manager — Copilot Instructions
+# Fleetcheck — Copilot Instructions
 
-## Project Overview
+## Project Snapshot
 
-**Fleet Manager** is a fleet maintenance management system for small operations (up to 20 light vehicles).  
-Stack: **Laravel 11 · Inertia.js · Vue 3 (Composition API) · Tailwind CSS · Vite**
+**Fleetcheck** is based on the Laravel Vue starter and is evolving into a fleet maintenance system.
+
+Current stack in this repository:
+
+- **PHP 8.3**
+- **Laravel 13**
+- **Inertia.js 3**
+- **Vue 3 + TypeScript (`<script setup lang="ts">`)**
+- **Tailwind CSS 4**
+- **Laravel Fortify** (authentication)
+- **Laravel Wayfinder** (`resources/js/routes`, `resources/js/actions`)
+- **Pest 4** (testing)
 
 ---
 
-## Architecture & Conventions
+## Core Conventions
 
-### Laravel (Backend)
+### Backend (Laravel)
 
-- Follow **Laravel conventions strictly**: resourceful controllers, form requests, policies, observers.
-- All business logic lives in `app/Services/` — never in controllers or models.
-- Use **Form Requests** for all validation (`app/Http/Requests/`).
-- Use **API Resources** (`app/Http/Resources/`) for all JSON responses via Inertia.
-- Database interactions use **Eloquent only** — no raw DB queries unless absolutely necessary.
-- Use **DB transactions** for any operation that writes to more than one table.
-- Define model relationships, casts, and fillable in every model. Never use `$guarded = []`.
-- Use **Eloquent Scopes** for reusable query filters (e.g., `scopeActive`, `scopeOverdue`).
-- Schedule recurring checks (maintenance due, CNH expiry) via `app/Console/Kernel.php`.
-- Dispatch **Jobs** for heavy processing; use **Laravel Notifications** for alerts.
+- Keep controllers thin; delegate non-trivial domain behavior to services.
+- For new domain features, place business logic in `app/Services/`.
+- Use **Form Requests** for validation in all write endpoints.
+- Use **Eloquent** for persistence; avoid raw SQL unless clearly justified.
+- Wrap multi-table writes in **DB transactions**.
+- Authorize actions in controllers with policies/gates (`$this->authorize(...)`).
+- Prefer API Resources (`app/Http/Resources/`) for data passed to Inertia pages.
+- Never use `$request->all()` in write flows; use `$request->validated()`.
 
-#### File Structure (Backend)
-```
+### Frontend (Vue + Inertia)
+
+- Use Composition API only: `<script setup lang="ts">`.
+- Keep frontend directories lowercase:
+  - `resources/js/pages/`
+  - `resources/js/components/`
+  - `resources/js/layouts/`
+  - `resources/js/composables/`
+- Prefer typed props with `defineProps<{ ... }>()`.
+- Use Inertia primitives (`Form`, `useForm`, `router`) instead of direct `axios`.
+- Use Wayfinder route helpers from `resources/js/routes/` and `resources/js/actions/`.
+- Follow page layout conventions from `resources/js/app.ts`:
+  - `auth/*` pages use `AuthLayout`
+  - `settings/*` pages compose `AppLayout + settings/Layout`
+  - default pages use `AppLayout`
+
+---
+
+## Repository Structure (Current)
+
+```text
 app/
-├── Console/
-├── Events/
+├── Actions/
 ├── Http/
-│   ├── Controllers/        # Thin controllers — delegate to Services
-│   ├── Middleware/
-│   ├── Requests/           # One FormRequest per action
-│   └── Resources/          # API Resources for Inertia props
-├── Models/                 # Eloquent models
-├── Notifications/          # Laravel Notifications
-├── Observers/              # Model Observers
-├── Policies/               # Authorization policies
-└── Services/               # All business logic
-database/
-├── factories/
-├── migrations/
-└── seeders/
-routes/
-├── web.php                 # All Inertia routes
-└── auth.php
-```
+│   ├── Controllers/
+│   ├── Requests/
+│   └── Resources/
+├── Models/
+└── Providers/
 
-### Vue 3 / Inertia (Frontend)
-
-- Use **Composition API** exclusively (`<script setup>`). Never use Options API.
-- All pages live in `resources/js/Pages/` — mirroring the route structure.
-- Reusable components go in `resources/js/Components/`.
-- Shared layout in `resources/js/Layouts/AppLayout.vue`.
-- Use `usePage()` from `@inertiajs/vue3` to access shared props (auth user, alerts count).
-- Use `useForm()` from `@inertiajs/vue3` for all forms — never plain `axios`.
-- Do not use Vuex or Pinia unless explicitly introduced. Prefer Inertia shared data and props.
-
-#### File Structure (Frontend)
-```
 resources/js/
-├── Components/
-│   ├── Common/             # Buttons, Badges, Inputs, Modals, Tables
-│   ├── Vehicles/
-│   ├── Drivers/
-│   ├── ServiceOrders/
-│   ├── Fuel/
-│   └── Dashboard/
-├── Layouts/
-│   └── AppLayout.vue       # Sidebar + Header shell
-├── Pages/
-│   ├── Auth/
-│   ├── Dashboard/
-│   ├── Vehicles/
-│   ├── Drivers/
-│   ├── MaintenancePlans/
-│   ├── ServiceOrders/
-│   ├── Fuel/
-│   └── Alerts/
-└── app.js
+├── actions/
+├── components/
+├── composables/
+├── layouts/
+├── pages/
+├── routes/
+├── types/
+└── wayfinder/
+
+routes/
+├── web.php
+├── settings.php
+└── console.php
+
+tests/
+├── Feature/
+└── Unit/
 ```
 
----
+Notes:
 
-## Domain & Data Model
-
-### Entities
-
-| Model | Key Fields | Notes |
-|---|---|---|
-| `User` | `name, email, password, role` | Roles: `admin, gestor, motorista, financeiro` |
-| `Vehicle` | `plate, brand, model, year, status, current_mileage` | Statuses: `ativo, em_manutencao, inativo` |
-| `Driver` | `cnh_number, cnh_category, cnh_expiry, user_id, vehicle_id` | 1:1 with User; 1:N with Vehicles over time |
-| `MaintenancePlan` | `type, trigger_type, trigger_km, trigger_days, next_due_at, vehicle_id` | Types: `preventiva, preditiva` |
-| `ServiceOrder` | `type, status, opened_at, closed_at, total_cost, vehicle_id, user_id` | Statuses: `aberta, em_andamento, concluida` |
-| `ServiceOrderItem` | `description, quantity, unit_cost, service_order_id` | — |
-| `FuelRecord` | `fueled_at, liters, price_per_liter, mileage_at_fueling, vehicle_id, driver_id` | — |
-| `Alert` | `type, status, message, triggered_at, alertable_type, alertable_id` | Polymorphic |
-| `MileageLog` | `mileage, recorded_at, vehicle_id, user_id` | Append-only log |
-
-### Key Business Rules
-
-- A `Vehicle` can only have **one active `Driver`** at a time.
-- When a `ServiceOrder` is closed, `total_cost` must be recalculated from all `ServiceOrderItems`.
-- `MaintenancePlan.next_due_at` is recalculated automatically after each OS closure (Observer).
-- `FuelRecord` entries trigger a recalculation of the vehicle's average consumption.
-- `Alert` records are **polymorphic** — they can belong to `Vehicle`, `Driver`, or `MaintenancePlan`.
-- Never delete records — use soft deletes (`SoftDeletes` trait) on all main entities.
+- Existing pages include `users/UserList`, `auth/Login`, and `settings/Appearance`.
+- Inertia page discovery is configured for `resources/js/pages` in `config/inertia.php`.
 
 ---
 
-## Authorization
+## Fleet Domain Direction (Strict Rules for New Modules)
 
-Use **Laravel Policies** for every model. Use **Gates** for cross-model actions.
+When adding modules like `Vehicle`, `Driver`, `MaintenancePlan`, `ServiceOrder`, `FuelRecord`, or `Alert`, use these rules:
 
-| Action | `gestor` | `motorista` | `financeiro` |
-|---|---|---|---|
-| Cadastrar/editar veículos | ✅ | ❌ | ❌ |
-| Abrir OS corretiva | ✅ | ✅ | ❌ |
-| Aprovar / fechar OS | ✅ | ❌ | ❌ |
-| Registrar abastecimento | ✅ | ✅ | ❌ |
-| Ver custos e relatórios | ✅ | ❌ | ✅ |
-| Gerenciar planos de manutenção | ✅ | ❌ | ❌ |
-| Ver alertas | ✅ | ✅ | ✅ |
+1. **Controller + service split is required**
+   - Controller handles HTTP concerns only.
+   - Domain workflow lives in `app/Services/*Service.php`.
+2. **Write validation is required**
+   - Every write action must use a dedicated Form Request.
+3. **Authorization is required**
+   - Add a policy per model and call `$this->authorize(...)` in endpoints.
+4. **Output shaping is required**
+   - Use API Resources for collections/items sent to Inertia.
+5. **Lifecycle automation is explicit**
+   - Use observers/jobs/notifications where behavior is event-driven.
+6. **Deletion strategy defaults to soft deletes**
+   - Main domain entities should use soft deletes unless there is a strong reason not to.
+7. **Use enums for stable status/role fields**
+   - Add enums when statuses/roles are introduced to avoid string drift.
 
-Always authorize in the **controller** using `$this->authorize()` or policy middleware. Never check roles in the view.
+### Fleet Module Definition of Done (DoD)
 
----
+A new domain module is considered complete when it includes:
 
-## Design System
+- Model + migration + factory.
+- Resourceful controller methods for required actions.
+- Form Requests for create/update (and other writes when needed).
+- Policy with controller authorization calls.
+- Service class for non-trivial business workflow.
+- API Resource(s) for page/API data shape.
+- Inertia page(s) in `resources/js/pages/<module>/`.
+- Wayfinder-backed frontend route usage (no hardcoded URLs).
+- Pest coverage:
+  - Feature tests for HTTP status, authorization, and Inertia component/props.
+  - Unit tests for service-level business rules.
 
-### Color Palette (CSS Variables)
+### Multi-tenant Preparation
 
-```css
-:root {
-  --color-navy:    #1B2A3B;  /* Sidebar, header */
-  --color-azure:   #2C6FBF;  /* Primary — buttons, links */
-  --color-sky:     #4B9CE8;  /* Hover states */
-  --color-ice:     #E8F2FC;  /* Info backgrounds */
-  --color-mint:    #27A06B;  /* Success / active */
-  --color-amber:   #E8903A;  /* Warning / alert */
-  --color-crimson: #D94040;  /* Error / critical */
-  --color-frost:   #F4F5F7;  /* General app background */
-}
-```
-
-Always use these variables (or their Tailwind config equivalents). Never hardcode hex colors in components.
-
-### Typography
-
-Font: **Inter** (Google Fonts). Always loaded globally.
-
-| Use | Size | Weight |
-|---|---|---|
-| Page title | 28px | 500 |
-| Section title | 18px | 500 |
-| Label / subtitle | 13px | 500 + uppercase |
-| Body text | 14px | 400 |
-| Auxiliary text | 12px | 400 |
-| KPI number | 28px | 500 + `tabular-nums` |
-
-### Status Badges
-
-**Vehicles:**
-| Status | Background | Text |
-|---|---|---|
-| `ativo` | `#EAF3DE` | `#3B6D11` |
-| `em_manutencao` | `#FAEEDA` | `#854F0B` |
-| `critico` | `#FCEBEB` | `#A32D2D` |
-| `inativo` | `#F4F5F7` | `#5F5E5A` |
-
-**Service Orders:**
-| Status | Background | Text |
-|---|---|---|
-| `aberta` | `#E6F1FB` | `#185FA5` |
-| `em_andamento` | `#FAEEDA` | `#854F0B` |
-| `concluida` | `#EAF3DE` | `#3B6D11` |
-| `vencida` | `#FCEBEB` | `#A32D2D` |
-
-Create a reusable `<StatusBadge status="..." type="vehicle|os" />` component.
-
----
-
-## Coding Standards
-
-### PHP / Laravel
-
-- PHP 8.2+ features allowed: `readonly` properties, enums, named arguments, match expressions.
-- Use **PHP Enums** for `role`, `vehicle_status`, `os_status`, `alert_type`.
-- Return `JsonResponse` never — use `Inertia::render()` for pages and `back()` / `redirect()` for mutations.
-- Every controller method must have a **single responsibility**.
-- Add `@throws` and return type hints to all Service methods.
-- Write **PHPUnit tests** for all Services. Feature tests for all HTTP endpoints.
+The app is single-tenant for now. Do **not** add `company_id` yet.
+When writing query points that will need tenant filtering later, annotate with:
 
 ```php
-// ✅ Good
-public function store(StoreServiceOrderRequest $request): RedirectResponse
-{
-    $this->serviceOrderService->create($request->validated());
-    return redirect()->route('service-orders.index');
-}
-
-// ❌ Bad — validation + logic in controller
-public function store(Request $request)
-{
-    $request->validate([...]);
-    ServiceOrder::create([...]);
-}
+// TODO(multi-tenant): add tenant scope filter here
 ```
 
-### Vue / Inertia
+---
 
-- Always use `<script setup lang="ts">` (TypeScript preferred; JS accepted if types are too complex).
-- Props must always be typed with `defineProps<{...}>()`.
-- Emit events with `defineEmits<{...}>()`.
-- Extract repeated logic into **composables** in `resources/js/Composables/`.
-- Never call `axios` directly — use `useForm` or `router` from `@inertiajs/vue3`.
+## Design System Guidelines
 
-```vue
-<!-- ✅ Good -->
-<script setup lang="ts">
-import { useForm } from '@inertiajs/vue3'
-const form = useForm({ plate: '', brand: '' })
-const submit = () => form.post(route('vehicles.store'))
-</script>
+Keep design guidance consistent and token-driven.
 
-<!-- ❌ Bad -->
-<script setup>
-import axios from 'axios'
-const submit = () => axios.post('/vehicles', { ... })
-</script>
+### Foundation
+
+- Tailwind v4 is configured through `resources/css/app.css` (`@theme inline` + CSS variables).
+- Prefer semantic tokens such as `bg-background`, `text-foreground`, `border-border`, `text-muted-foreground`.
+- Do not hardcode brand hex values in feature components.
+- If a new color/token is needed, define it in the theme layer first, then consume via semantic classes.
+
+#### Color Reference (for token definitions)
+
+Use this palette when introducing or adjusting fleet-branded tokens in the theme layer (not directly in feature markup):
+
+| Token intent | Reference color |
+|---|---|
+| Fleet navy (layout shell) | `#1B2A3B` |
+| Fleet azure (primary action) | `#2C6FBF` |
+| Fleet sky (hover/info accent) | `#4B9CE8` |
+| Fleet mint (success/active) | `#27A06B` |
+| Fleet amber (warning) | `#E8903A` |
+| Fleet crimson (error/critical) | `#D94040` |
+| Fleet frost (neutral background) | `#F4F5F7` |
+
+Implementation rule: map these references to CSS variables/Tailwind semantic tokens first, then use semantic classes in components.
+
+### UI Composition
+
+- Prefer reusable primitives in `resources/js/components/ui/` before adding one-off markup.
+- Keep module-specific shared components in `resources/js/components/` with PascalCase filenames.
+- Keep visual logic out of pages when it can be extracted into reusable components.
+
+### Typography and Spacing
+
+- Use existing Tailwind scale utilities; avoid arbitrary pixel values unless required.
+- Prefer semantic text classes (`text-sm`, `text-muted-foreground`, etc.) over inline style attributes.
+- Keep spacing rhythm consistent using standard spacing scale (`p-4`, `gap-6`, etc.).
+
+#### Typography Scale Reference
+
+| Use | Suggested utility/value | Weight |
+|---|---|---|
+| Page title | `text-2xl` (or ~28px equivalent) | `font-medium` / `font-semibold` |
+| Section title | `text-lg` (or ~18px equivalent) | `font-medium` |
+| Card/inline heading | `text-base` | `font-medium` |
+| Body text | `text-sm` | `font-normal` |
+| Auxiliary/meta text | `text-xs` | `font-normal` |
+| KPI number | `text-2xl` + `tabular-nums` | `font-medium` |
+
+Prefer existing component patterns (for example, `Heading.vue`) before introducing new one-off scales.
+
+### State and Feedback Patterns
+
+- Use consistent status patterns via reusable badges (e.g., `StatusBadge.vue`) instead of repeated inline class maps.
+- Use destructive/secondary/muted token variants for error/warning/neutral messaging.
+- Preserve accessible contrast in both light and dark mode.
+
+#### Status Badge Reference
+
+When implementing `StatusBadge.vue` or module-specific status badges, keep mappings consistent and token-driven:
+
+| Domain state | Preferred badge style |
+|---|---|
+| `active`, `completed`, `ok` | success-style token mapping (typically secondary/success token) |
+| `scheduled`, `in_progress`, `due_soon` | warning-style token mapping |
+| `overdue`, `failed`, `critical` | destructive token mapping |
+| `inactive`, `draft`, `unknown` | outline/muted token mapping |
+
+Current reusable primitive is `resources/js/components/ui/badge` (`default`, `secondary`, `destructive`, `outline`). Compose domain statuses from these variants or approved semantic extensions.
+
+### Accessibility
+
+- Inputs require visible labels.
+- Interactive elements must include focus-visible styles.
+- Do not rely on color alone to convey critical state.
+
+---
+
+## Testing Conventions
+
+- Use **Pest** syntax for all new tests.
+- Feature tests live in `tests/Feature/`; unit tests live in `tests/Unit/`.
+- `RefreshDatabase` is already applied for `tests/Feature` in `tests/Pest.php`.
+- Use factories for test setup.
+- For Inertia responses, assert both status and component/props (`assertInertia`).
+
+Example expectation style:
+
+```php
+$response->assertInertia(fn ($page) => $page
+    ->component('users/UserList')
+    ->has('users')
+);
 ```
-
-### Tailwind CSS
-
-- Configure the Fleet Manager palette in `tailwind.config.js` under `theme.extend.colors`.
-- Use semantic class names through Tailwind's config — avoid arbitrary values (`[#1B2A3B]`) for brand colors.
-- Keep component styles co-located in `.vue` files. No separate CSS files unless for global utilities.
-
----
-
-## Multi-Tenancy Preparation
-
-The system is **single-tenant now** but must be easy to expand. Follow these rules:
-
-1. **Do not add `company_id`** to any model yet.
-2. **Do not create a `Company` model yet**.
-3. Structure Services and Repositories so that a future **Global Scope** can be injected with minimal changes.
-4. When writing queries, avoid joins that would break with tenant isolation.
-5. Document any spot where `company_id` will eventually be needed with:
-   ```php
-   // TODO(multi-tenant): add ->where('company_id', auth()->user()->company_id) here
-   ```
-
----
-
-## Queue & Notifications
-
-- All outbound notifications (`AlertNotification`, `MaintenanceDueNotification`) must be **queued** — never sent synchronously.
-- Use the `database` notification channel by default; add `mail` as a second channel when the notification is critical.
-- Alert generation logic lives in `app/Services/AlertService.php`.
-- The scheduled command `app/Console/Commands/CheckMaintenanceDue.php` runs daily and calls `AlertService`.
-
----
-
-## Testing Guidelines
-
-- **Unit tests** → `tests/Unit/Services/` — test each Service method in isolation.
-- **Feature tests** → `tests/Feature/` — one test file per controller, test HTTP status + DB state.
-- Use **Factories** for all test data. Never seed production-style data in tests.
-- Each test must `RefreshDatabase`.
-- Test authorization: assert a `motorista` **cannot** access gestor-only routes (expect 403).
 
 ---
 
@@ -278,26 +237,21 @@ The system is **single-tenant now** but must be easy to expand. Follow these rul
 | Artifact | Convention | Example |
 |---|---|---|
 | Model | PascalCase singular | `ServiceOrder` |
-| Migration | snake_case descriptive | `create_service_orders_table` |
-| Controller | PascalCase + `Controller` | `ServiceOrderController` |
+| Controller | PascalCase + `Controller` | `VehicleController` |
 | Service | PascalCase + `Service` | `ServiceOrderService` |
-| Form Request | Action + Model + `Request` | `StoreServiceOrderRequest` |
-| Policy | Model + `Policy` | `ServiceOrderPolicy` |
-| Vue Page | PascalCase, inside route folder | `Pages/ServiceOrders/Index.vue` |
-| Vue Component | PascalCase, descriptive | `ServiceOrderStatusBadge.vue` |
+| Form Request | Action + Model + `Request` | `StoreVehicleRequest` |
+| Policy | Model + `Policy` | `VehiclePolicy` |
+| Vue page component | Path under lowercase folder | `pages/users/UserList.vue` |
+| Vue component | PascalCase file name | `StatusBadge.vue` |
 | Composable | `use` + PascalCase | `useVehicleStatus.ts` |
-| Route name | dot.notation | `service-orders.store` |
+| Route name | dot notation | `users.index` |
 
 ---
 
 ## What to Avoid
 
-- ❌ Logic in Blade/Vue templates beyond simple conditionals.
-- ❌ Calling Eloquent directly in controllers — always go through a Service.
-- ❌ Using `$request->all()` — always use `$request->validated()`.
-- ❌ Hardcoded role strings (`'gestor'`) — use the `Role` enum.
-- ❌ `dd()`, `dump()`, `var_dump()` left in committed code.
-- ❌ Storing calculated values (e.g., `total_cost`) without a corresponding Service method to recalculate them.
-- ❌ Using Options API in Vue components.
-- ❌ Direct `axios` calls — use Inertia's `useForm` or `router`.
-- ❌ Arbitrary Tailwind color values for brand colors — use the configured palette.
+- Business logic directly in controllers or Vue templates.
+- Direct `axios` usage for form flows that should use Inertia helpers.
+- Hardcoded URL strings when Wayfinder helpers already exist.
+- Returning ad-hoc prop shapes to pages instead of using resources/consistent structures.
+- Leaving debug calls (`dd`, `dump`, `var_dump`) in committed code.
