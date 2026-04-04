@@ -1,12 +1,9 @@
 <script setup lang="ts">
-import { Form, Head } from '@inertiajs/vue3';
+import { Head } from '@inertiajs/vue3';
 import DataTable from '@/components/data-table/DataTable.vue';
-import AppLayout from '@/layouts/AppLayout.vue';
 import { index } from '@/routes/users';
-import type { BreadcrumbItem } from '@/types';
 import type { DataTableColumn } from '@/types/data-table';
 import type { UserListItem } from '@/types/users';
-import { dashboard } from '@/routes';
 
 const props = defineProps({
     title: {
