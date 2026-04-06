@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Link } from '@inertiajs/vue3';
 import { computed, ref, watch } from 'vue';
 import { Button } from '@/components/ui/button';
 import {
@@ -17,6 +18,8 @@ const props = withDefaults(
     defineProps<{
         rows: DataTableRow[];
         columns: DataTableColumn[];
+        allowAdd?: boolean;
+        createRoute?: string;
         caption?: string;
         emptyText?: string;
         rowKey?: string;
@@ -180,7 +183,14 @@ function goToNextPage(): void {
 <template>
     <div class="space-y-3">
         <div class="flex items-center justify-end gap-5">
-            <Button>Adicionar</Button>
+            <Button v-if="allowAdd">
+                <Link
+                    :href="createRoute"
+                    class="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition"
+                >
+                    Adicionar
+                </Link>
+            </Button>
             <input
                 v-model="searchTerm"
                 type="search"

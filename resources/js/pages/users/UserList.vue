@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
 import DataTable from '@/components/data-table/DataTable.vue';
-import { index } from '@/routes/users';
+import { index, create } from '@/routes/users';
 import type { DataTableColumn } from '@/types/data-table';
 import type { UserListItem } from '@/types/users';
 
@@ -61,6 +61,8 @@ const userColumns: DataTableColumn[] = [
 
             <div class="mt-3">
                 <DataTable
+                    :allow-add="true"
+                    :createRoute="create.url()"
                     :rows="props.users"
                     :columns="userColumns"
                     empty-text="Nenhum usuário encontrado."

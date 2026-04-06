@@ -15,9 +15,9 @@ import { edit } from '@/routes/security';
 import { disable, enable } from '@/routes/two-factor';
 
 type Props = {
-    canManageTwoFactor?: boolean;
-    requiresConfirmation?: boolean;
-    twoFactorEnabled?: boolean;
+    canManageTwoFactor: boolean;
+    requiresConfirmation: boolean;
+    twoFactorEnabled: boolean;
 };
 
 withDefaults(defineProps<Props>(), {

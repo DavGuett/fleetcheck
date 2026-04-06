@@ -20,4 +20,9 @@ class UserController extends Controller
             'users' => UserResource::collection($users)->resolve(),
         ]);
     }
+
+    public function create(): Response
+    {
+        return Inertia::render('users/Create');
+    }
 }
