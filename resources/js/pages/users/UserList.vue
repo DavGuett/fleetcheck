@@ -37,7 +37,7 @@ const userColumns: DataTableColumn[] = [
     },
     {
         key: 'name',
-        label: 'Name',
+        label: 'Nome',
         sortable: true,
     },
     {
@@ -55,18 +55,17 @@ const userColumns: DataTableColumn[] = [
         class="flex h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-4"
     >
         <section
-            class="rounded-xl border border-sidebar-border/70 bg-background p-4 dark:border-sidebar-border"
+            class="rounded-xl border border-border bg-card p-4 dark:border-border"
         >
-            <h2 class="text-lg font-semibold">Registered users</h2>
+            <h2 class="text-lg font-semibold">Usuários</h2>
 
             <div class="mt-3">
                 <DataTable
                     :rows="props.users"
                     :columns="userColumns"
-                    caption="Registered users"
-                    empty-text="No users found."
+                    empty-text="Nenhum usuário encontrado."
                     searchable
-                    search-placeholder="Search users..."
+                    search-placeholder="Procurar usuários..."
                     :page-size="8"
                 />
             </div>

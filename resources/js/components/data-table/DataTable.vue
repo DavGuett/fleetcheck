@@ -29,7 +29,7 @@ const props = withDefaults(
         emptyText: 'No results found.',
         rowKey: 'id',
         searchable: false,
-        searchPlaceholder: 'Search...',
+        searchPlaceholder: 'Pesquisar...',
         pageSize: 10,
     },
 );
@@ -248,7 +248,7 @@ function goToNextPage(): void {
 
         <div class="flex items-center justify-between gap-3">
             <p class="text-sm text-muted-foreground">
-                Page {{ currentPage }} of {{ totalPages }}
+                Página {{ currentPage }} de {{ totalPages }}
             </p>
 
             <div class="flex items-center gap-2">
@@ -259,7 +259,7 @@ function goToNextPage(): void {
                     :disabled="currentPage <= 1"
                     @click="goToPreviousPage"
                 >
-                    Previous
+                    Anterior
                 </Button>
                 <Button
                     type="button"
@@ -268,7 +268,7 @@ function goToNextPage(): void {
                     :disabled="currentPage >= totalPages"
                     @click="goToNextPage"
                 >
-                    Next
+                    Próxima
                 </Button>
             </div>
         </div>
