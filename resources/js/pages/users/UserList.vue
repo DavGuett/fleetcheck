@@ -55,7 +55,7 @@ const userColumns: DataTableColumn[] = [
         class="flex h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-4"
     >
         <section
-            class="rounded-xl border border-border bg-card p-4 dark:border-border"
+            class="rounded-xl border border-border bg-blue-950/60 p-4 dark:border-border"
         >
             <h2 class="text-lg font-semibold">Usuários</h2>
 
